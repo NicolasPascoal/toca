@@ -1,0 +1,35 @@
+{
+  "//": "Cada agente da Toca. persona = arquivo .md com a personalidade. cwd = pasta onde ele trabalha (aceita ${ENV_VAR}).",
+  "agents": [
+    {
+      "id": "alfred",
+      "name": "Alfred",
+      "role": "Code review",
+      "persona": "alfred.md",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "cwd": "${ALFRED_CWD:-C:/dev}",
+      "allowedTools": ["Read", "Grep", "Glob"],
+      "askTools": ["Bash"],
+      "disallowedTools": ["Write", "Edit", "NotebookEdit"],
+      "seat": "poltrona",
+      "idle": "whisky",
+      "voice": { "model": "pt_BR-cadu-medium", "lengthScale": 1.0, "pitch": 0.9, "sentenceSilence": 0.4 }
+    },
+    {
+      "id": "nexus",
+      "name": "Nexus",
+      "role": "Financeiro",
+      "persona": "nexus.md",
+      "model": "claude-opus-5-5",
+      "effort": "medium",
+      "cwd": "${NEXUS_CWD:-./data/financas}",
+      "allowedTools": ["Read", "Grep", "Glob", "WebSearch", "WebFetch"],
+      "askTools": [],
+      "disallowedTools": ["Bash", "Write", "Edit", "NotebookEdit"],
+      "seat": "sofa",
+      "idle": "celular",
+      "voice": { "model": "pt_BR-jeff-medium", "lengthScale": 0.9 }
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Toca</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --ink: #f6e7cf; --muted: #c9b08f; --glass: rgba(24, 14, 9, 0.72); --line: rgba(246, 231, 207, 0.18); }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: #120b08; color: var(--ink); font-family: Inter, system-ui, sans-serif; overflow: hidden; }
+    #app { position: fixed; inset: 0; }
+    #app canvas { display: block; }
+    .labels { position: absolute; inset: 0; pointer-events: none; }
+    .vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,0.55) 100%); }
+    .hud { position: fixed; left: 24px; top: 20px; pointer-events: none; }
+    .hud h1 { font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 28px; margin: 0; letter-spacing: 0.5px; }
+    .hud p { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+    .tag { display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; cursor: pointer; transform: translateY(-8px); }
+    .tag .name { font-size: 13px; font-weight: 500; padding: 4px 12px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); opacity: 0.75; transition: opacity .2s, transform .2s; }
+    .tag.hover .name, .tag.talking .name { opacity: 1; transform: scale(1.06); border-color: rgba(255, 190, 110, 0.6); }
+    .tag .bubble { max-width: 260px; font-family: Fraunces, Georgia, serif; font-size: 16px; line-height: 1.4; padding: 10px 14px; border-radius: 14px; background: var(--glass); border: 1px solid var(--line); opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .3s; min-height: 1em; }
+    .tag.talking .bubble, .tag.working .bubble { opacity: 1; transform: none; }
+    .tag.working:not(.talking) .bubble { font-size: 13px; max-width: 220px; }
+    .tag.done .name { opacity: 1; border-color: #ffb45a; animation: done-pulse 1.4s ease-in-out infinite; }
+    .tag.done .name::after { content: ' · pronto'; color: #ffcf8a; }
+    @keyframes done-pulse { 50% { box-shadow: 0 0 0 6px rgba(255, 180, 90, 0.25); } }
+    .tag .bubble .status { color: var(--muted); font-family: Inter, system-ui, sans-serif; font-size: 13px; font-style: italic; }
+
+    /* barra de conversa */
+    #composer { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); width: min(620px, calc(100vw - 32px)); display: flex; gap: 8px; padding: 8px; border-radius: 16px; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(6px); }
+    #composer input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--ink); font: 15px Inter, system-ui, sans-serif; padding: 8px 10px; }
+    #composer input::placeholder { color: var(--muted); opacity: 0.8; }
+    #composer button { border: 1px solid var(--line); background: rgba(255, 190, 110, 0.12); color: var(--ink); border-radius: 10px; padding: 0 14px; font: 500 14px Inter, sans-serif; cursor: pointer; }
+    #composer button:hover { background: rgba(255, 190, 110, 0.22); }
+    #mic { width: 42px; padding: 0 !important; font-size: 18px !important; }
+    #mic.on { background: #b8452a !important; border-color: #ff9a6a; animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(255, 120, 80, 0.25); } }
+    body.busy #composer { opacity: 0.6; pointer-events: none; }
+
+    /* pedido de permissão */
+    #permission { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%) translateY(10px); width: min(520px, calc(100vw - 32px)); padding: 16px; border-radius: 16px; background: rgba(36, 20, 12, 0.94); border: 1px solid rgba(255, 190, 110, 0.5); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; }
+    #permission.open { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
+    #permission code { display: block; margin: 8px 0 14px; padding: 8px 10px; border-radius: 8px; background: rgba(0,0,0,0.4); font-size: 13px; white-space: pre-wrap; word-break: break-all; }
+    #permission .actions { display: flex; gap: 8px; justify-content: flex-end; }
+    #permission button { border-radius: 10px; padding: 8px 16px; font: 500 14px Inter, sans-serif; cursor: pointer; border: 1px solid var(--line); background: transparent; color: var(--ink); }
+    #permission .allow { background: #2f6b3a; border-color: #5fae6c; }
+
+    /* o quadro */
+    #board { position: fixed; top: 20px; right: 20px; bottom: 96px; width: min(520px, calc(100vw - 32px)); display: flex; flex-direction: column; border-radius: 14px; background: #f3e6cc; color: #3a2a1a; border: 8px solid #3b2416; box-shadow: 0 20px 60px rgba(0,0,0,0.6); transform: translateX(30px); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+    #board.open { opacity: 1; transform: none; pointer-events: auto; }
+    #board header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(58, 42, 26, 0.2); }
+    .board-title { font-family: Fraunces, Georgia, serif; font-size: 20px; }
+    .board-close { border: 0; background: transparent; font-size: 22px; cursor: pointer; color: #3a2a1a; }
+    .board-body { overflow: auto; padding: 4px 20px 20px; font-size: 14px; line-height: 1.6; }
+    .board-body h1, .board-body h2, .board-body h3 { font-family: Fraunces, Georgia, serif; font-weight: 500; }
+    .board-body code { background: rgba(58, 42, 26, 0.1); padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+    .board-body pre { background: #2a1c14; color: #f3e6cc; padding: 12px; border-radius: 8px; overflow: auto; }
+    .board-body pre code { background: none; padding: 0; }
+    .board-body table { border-collapse: collapse; width: 100%; }
+    .board-body th, .board-body td { border: 1px solid rgba(58, 42, 26, 0.25); padding: 4px 8px; text-align: left; }
+
+    @media (max-width: 600px) { .hud { left: 16px; } .hud h1 { font-size: 22px; } #board { top: 12px; right: 16px; } }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div class="vignette"></div>
+  <div class="hud">
+    <h1>Toca</h1>
+    <p id="hud-sub">Clique em um agente (ou aperte 1 / 2) para chamá-lo</p>
+  </div>
+  <form id="composer" autocomplete="off">
+    <button type="button" id="mic" title="Segure para falar (ou segure Espaço)" aria-label="Segure para falar">🎙</button>
+    <input id="composer-input" placeholder='Escreva: "Alfred, revisa meu último commit"' />
+    <button type="submit">Enviar</button>
+  </form>
+  <div id="permission" role="dialog" aria-live="polite">
+    <div class="perm-text"></div>
+    <code></code>
+    <div class="actions"><button class="deny">Negar</button><button class="allow">Autorizar</button></div>
+  </div>
+  <aside id="board" aria-label="Quadro de relatórios">
+    <header><span class="board-title">Quadro</span><button class="board-close" aria-label="Fechar quadro">×</button></header>
+    <div class="board-body"></div>
+  </aside>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
